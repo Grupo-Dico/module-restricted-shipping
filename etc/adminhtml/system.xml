@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author GDMexico Team
+ * @package GDMexico_RestrictedShipping
+ * @copyright Copyright (c) 2026 GDMexico.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="gdmexico_restricted_shipping" translate="label" sortOrder="920" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Restricción de Envíos por Municipio</label>
+            <tab>sales</tab>
+            <resource>Magento_Config::config</resource>
+
+            <group id="general" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Configuración General</label>
+                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Habilitar validación</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="customer_message" translate="label comment" type="textarea" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Mensaje al cliente</label>
+                    <comment>Mensaje mostrado cuando la compra se bloquea.</comment>
+                </field>
+            </group>
+
+            <group id="areas" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Municipios Restringidos</label>
+                <field id="restricted_municipalities" translate="label comment" type="textarea" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Municipios restringidos</label>
+                    <comment>Captura uno por línea o separados por coma. Ejemplo: Chimalhuacán, Ecatepec</comment>
+                </field>
+            </group>
+
+            <group id="rules" translate="label" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Regla por Producto</label>
+                <field id="enable_product_rule" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Bloquear por producto marcado</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

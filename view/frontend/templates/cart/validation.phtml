@@ -1,0 +1,11 @@
+<?php /** @var \GDMexico\RestrictedShipping\Block\Cart\Validation $block */ ?>
+
+<script type="text/x-magento-init">
+{
+    "*": {
+        "GDMexico_RestrictedShipping/js/cart-validation": {
+            "cartId": "<?= $block->escapeJs($block->getFrontendCartId()) ?>"
+        }
+    }
+}
+</script>

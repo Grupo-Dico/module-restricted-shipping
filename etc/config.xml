@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author GDMexico Team
+ * @package GDMexico_RestrictedShipping
+ * @copyright Copyright (c) 2026 GDMexico.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <gdmexico_restricted_shipping>
+            <general>
+                <enabled>1</enabled>
+                <customer_message>Algunos productos en tu carrito no pueden enviarse al municipio seleccionado. Por favor, verifica tu dirección o retira los productos no disponibles para esta zona.</customer_message>
+            </general>
+            <areas>
+                <restricted_municipalities>Chimalhuacán</restricted_municipalities>
+            </areas>
+            <rules>
+                <enable_product_rule>1</enable_product_rule>
+            </rules>
+        </gdmexico_restricted_shipping>
+    </default>
+</config>

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author GDMexico Team
+ * @package GDMexico_RestrictedShipping
+ * @copyright Copyright (c) 2026 GDMexico.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <preference for="GDMexico\RestrictedShipping\Api\ValidateCheckoutInterface"
+                type="GDMexico\RestrictedShipping\Model\ValidateCheckout"/>
+
+    <type name="Magento\Quote\Model\ShippingMethodManagement">
+        <plugin name="gdmexico_restricted_shipping_method_management"
+                type="GDMexico\RestrictedShipping\Plugin\ShippingMethodManagementPlugin"/>
+    </type>
+
+    <type name="Magento\Quote\Model\GuestCart\GuestShippingMethodManagement">
+        <plugin name="gdmexico_restricted_guest_shipping_method_management"
+                type="GDMexico\RestrictedShipping\Plugin\GuestShippingMethodManagementPlugin"/>
+    </type>
+
+    <type name="Magento\Checkout\Model\ShippingInformationManagement">
+        <plugin name="gdmexico_restricted_shipping_shipping_information"
+                type="GDMexico\RestrictedShipping\Plugin\ShippingInformationManagementPlugin"/>
+    </type>
+
+    <type name="Magento\Checkout\Model\GuestShippingInformationManagement">
+        <plugin name="gdmexico_restricted_shipping_guest_shipping_information"
+                type="GDMexico\RestrictedShipping\Plugin\GuestShippingInformationManagementPlugin"/>
+    </type>
+
+    <type name="Magento\Checkout\Model\PaymentInformationManagement">
+        <plugin name="gdmexico_restricted_shipping_payment_information"
+                type="GDMexico\RestrictedShipping\Plugin\PaymentInformationManagementPlugin"/>
+    </type>
+
+    <type name="Magento\Checkout\Model\GuestPaymentInformationManagement">
+        <plugin name="gdmexico_restricted_shipping_guest_payment_information"
+                type="GDMexico\RestrictedShipping\Plugin\PaymentInformationManagementPlugin"/>
+    </type>
+</config>
