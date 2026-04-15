@@ -43,7 +43,6 @@ class GuestShippingInformationManagementPlugin
     public function beforeSaveAddressInformation(
         GuestShippingInformationManagement $subject,
         $cartId,
-        $email,
         ShippingInformationInterface $addressInformation
     ): array {
         $quoteId = (int)$this->quoteIdMaskFactory->create()
@@ -62,6 +61,6 @@ class GuestShippingInformationManagementPlugin
             throw new LocalizedException(__($result['message']));
         }
 
-        return [$cartId, $email, $addressInformation];
+        return [$cartId, $addressInformation];
     }
 }
