@@ -5,10 +5,12 @@
  * @copyright Copyright (c) 2026 GDMexico.
  */
 declare(strict_types=1);
+
 namespace GDMexico\RestrictedShipping\Plugin;
 
 use GDMexico\RestrictedShipping\Model\RestrictionChecker;
 use Magento\Quote\Api\CartRepositoryInterface;
+use Magento\Quote\Api\Data\AddressInterface;
 use Magento\Quote\Model\ShippingMethodManagement;
 
 class ShippingMethodManagementPlugin
@@ -16,9 +18,6 @@ class ShippingMethodManagementPlugin
     private CartRepositoryInterface $cartRepository;
     private RestrictionChecker $restrictionChecker;
 
-    /**
-     * @return mixed
-     */
     public function __construct(
         CartRepositoryInterface $cartRepository,
         RestrictionChecker $restrictionChecker
@@ -27,14 +26,11 @@ class ShippingMethodManagementPlugin
         $this->restrictionChecker = $restrictionChecker;
     }
 
-    /**
-     * @return mixed
-     */
     public function afterEstimateByAddress(
         ShippingMethodManagement $subject,
         array $result,
         $cartId,
-        \Magento\Quote\Api\Data\AddressInterface $address
+        AddressInterface $address
     ): array {
         $quote = $this->cartRepository->getActive((int)$cartId);
         $validation = $this->restrictionChecker->validateQuoteByPostcode(
@@ -45,14 +41,11 @@ class ShippingMethodManagementPlugin
         return !empty($validation['is_restricted']) ? [] : $result;
     }
 
-    /**
-     * @return mixed
-     */
     public function afterEstimateByExtendedAddress(
         ShippingMethodManagement $subject,
         array $result,
         $cartId,
-        \Magento\Quote\Api\Data\AddressInterface $address
+        AddressInterface $address
     ): array {
         $quote = $this->cartRepository->getActive((int)$cartId);
         $validation = $this->restrictionChecker->validateQuoteByPostcode(

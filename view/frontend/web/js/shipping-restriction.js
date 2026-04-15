@@ -6,26 +6,20 @@ define([
 ], function ($, storage, urlBuilder, quote) {
     'use strict';
 
+    var timer = null;
+    var pendingRequest = null;
+    var lastKey = null;
+    var cache = {};
+
     function normalizeResponse(response) {
-        if ($.isArray(response)) {
-            return {
-                is_restricted: response[0] || false,
-                municipality: response[1] || '',
-                matched_items: response[2] || [],
-                message: response[3] || ''
-            };
-        }
+        response = response || {};
 
-        return response || {
-            is_restricted: false,
-            municipality: '',
-            matched_items: [],
-            message: ''
+        return {
+            is_restricted: !!response.is_restricted,
+            municipality: response.municipality || '',
+            message: response.message || '',
+            matched_items: Array.isArray(response.matched_items) ? response.matched_items : []
         };
-    }
-
-    function getCartId() {
-        return quote.getQuoteId();
     }
 
     function getPostcode() {
@@ -36,32 +30,60 @@ define([
     function removeMessages() {
         $('#gdmexico-restricted-top-message').remove();
         $('#gdmexico-restricted-method-message').remove();
+        $('#gdmexico-restricted-sidebar-message').remove();
+    }
+
+    function buildRestrictedItemsList(items) {
+        var $wrapper = $('<div/>');
+        var $title = $('<div/>', {
+            style: 'margin-top:10px; font-weight:600;'
+        }).text('Productos restringidos:');
+        var $ul = $('<ul/>', {
+            style: 'margin-top:8px; padding-left:18px;'
+        });
+
+        $.each(items, function (index, item) {
+            var name = item && item.name ? String(item.name) : '';
+            var sku = item && item.sku ? String(item.sku) : '';
+            var label = name;
+
+            if (sku) {
+                label += ' (' + sku + ')';
+            }
+
+            $('<li/>').text(label).appendTo($ul);
+        });
+
+        $wrapper.append($title).append($ul);
+
+        return $wrapper;
     }
 
     function renderTopMessage(response) {
-        if ($('#gdmexico-restricted-top-message').length) {
+        var $target = $('.checkout-shipping-address, #checkout-step-shipping').first();
+
+        if (!$target.length) {
             return;
         }
 
-        var html = '<div id="gdmexico-restricted-top-message" class="message error" style="margin: 0 0 20px;">' +
-            '<div>' + response.message;
+        $('#gdmexico-restricted-top-message').remove();
+
+        var $message = $('<div/>', {
+            id: 'gdmexico-restricted-top-message',
+            'class': 'message error',
+            style: 'margin: 0 0 20px;'
+        });
+
+        $('<div/>').text(response.message || '').appendTo($message);
 
         if (response.matched_items && response.matched_items.length) {
-            html += '<br><strong>Productos restringidos:</strong><ul>';
-
-            $.each(response.matched_items, function (index, item) {
-                html += '<li>' + item.name + ' (' + item.sku + ')</li>';
-            });
-
-            html += '</ul>';
+            $message.append(buildRestrictedItemsList(response.matched_items));
         }
 
-        html += '</div></div>';
-
-        $('.checkout-shipping-address, #checkout-step-shipping').first().before(html);
+        $target.before($message);
     }
 
-    function rKaNCgLvMEXxNzMxj2F7FYi1AdRrTo6Nhu(response) {
+    function renderMethodMessage(response) {
         var $container = $('#checkout-step-shipping_method .step-content');
 
         if (!$container.length) {
@@ -70,41 +92,61 @@ define([
 
         $('#gdmexico-restricted-method-message').remove();
 
-        var html = '<div id="gdmexico-restricted-method-message" class="message error" style="margin: 0 0 16px;">' +
-            '<div>' + response.message;
+        var $message = $('<div/>', {
+            id: 'gdmexico-restricted-method-message',
+            'class': 'message error',
+            style: 'margin: 0 0 16px;'
+        });
+
+        $('<div/>').text(response.message || '').appendTo($message);
 
         if (response.matched_items && response.matched_items.length) {
-            html += '<br><strong>Productos restringidos:</strong><ul>';
-
-            $.each(response.matched_items, function (index, item) {
-                html += '<li>' + item.name + ' (' + item.sku + ')</li>';
-            });
-
-            html += '</ul>';
+            $message.append(buildRestrictedItemsList(response.matched_items));
         }
 
-        html += '</div></div>';
-
-        $container.prepend(html);
-
+        $container.prepend($message);
         $container.find('.no-quotes-block').hide();
         quote.shippingMethod(null);
     }
 
     function validateRestriction() {
-        var cartId = getCartId();
         var postcode = getPostcode();
+        var key;
 
-        if (!cartId || !postcode) {
+        if (!postcode) {
             removeMessages();
             return;
         }
 
-        storage.get(
-            urlBuilder.build('/rest/V1/restricted-shipping/validate/' + cartId + '/' + encodeURIComponent(postcode)),
+        key = postcode;
+
+        if (lastKey === key && cache[key]) {
+            removeMessages();
+
+            if (!cache[key].is_restricted) {
+                $('#checkout-step-shipping_method .step-content .no-quotes-block').show();
+                return;
+            }
+
+            renderTopMessage(cache[key]);
+            renderMethodMessage(cache[key]);
+            return;
+        }
+
+        if (pendingRequest && pendingRequest.abort) {
+            pendingRequest.abort();
+        }
+
+        pendingRequest = storage.get(
+            urlBuilder.build('restrictedshipping/ajax/validate?postcode=' + encodeURIComponent(postcode)),
             false
-        ).done(function (rawResponse) {
+        );
+
+        pendingRequest.done(function (rawResponse) {
             var response = normalizeResponse(rawResponse);
+
+            cache[key] = response;
+            lastKey = key;
 
             removeMessages();
 
@@ -114,28 +156,32 @@ define([
             }
 
             renderTopMessage(response);
-            rKaNCgLvMEXxNzMxj2F7FYi1AdRrTo6Nhu(response);
+            renderMethodMessage(response);
         }).fail(function () {
             removeMessages();
         });
     }
 
+    function scheduleValidation(delay) {
+        clearTimeout(timer);
+        timer = setTimeout(validateRestriction, delay || 350);
+    }
+
     return function () {
         $(document).ready(function () {
-            setTimeout(validateRestriction, 800);
-            setTimeout(validateRestriction, 1800);
+            scheduleValidation(500);
         });
 
         quote.shippingAddress.subscribe(function () {
-            setTimeout(validateRestriction, 500);
+            scheduleValidation(350);
         });
 
         $(document).on('change blur keyup', 'input[name="postcode"]', function () {
-            setTimeout(validateRestriction, 400);
+            scheduleValidation(350);
         });
 
         $(document).ajaxComplete(function () {
-            setTimeout(validateRestriction, 600);
+            scheduleValidation(450);
         });
     };
 });

@@ -1,8 +1,16 @@
 <?php
+/**
+ * @author GDMexico Team
+ * @package GDMexico_RestrictedShipping
+ * @copyright Copyright (c) 2026 GDMexico.
+ */
+declare(strict_types=1);
+
 namespace GDMexico\RestrictedShipping\Setup\Patch\Data;
 
 use Magento\Catalog\Model\Product;
 use Magento\Eav\Model\Entity\Attribute\ScopedAttributeInterface;
+use Magento\Eav\Setup\EavSetup;
 use Magento\Eav\Setup\EavSetupFactory;
 use Magento\Framework\Setup\ModuleDataSetupInterface;
 use Magento\Framework\Setup\Patch\DataPatchInterface;
@@ -24,6 +32,7 @@ class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
     {
         $this->moduleDataSetup->getConnection()->startSetup();
 
+        /** @var EavSetup $eavSetup */
         $eavSetup = $this->eavSetupFactory->create(['setup' => $this->moduleDataSetup]);
         $entityTypeId = $eavSetup->getEntityTypeId(Product::ENTITY);
 
@@ -58,9 +67,13 @@ class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
         $this->moduleDataSetup->getConnection()->endSetup();
     }
 
-    private function assignAttributeToAllSets($eavSetup, int $entityTypeId, string $attributeCode, string $groupName): void
-    {
-        $attributeId = (int) $eavSetup->getAttributeId($entityTypeId, $attributeCode);
+    private function assignAttributeToAllSets(
+        EavSetup $eavSetup,
+        int $entityTypeId,
+        string $attributeCode,
+        string $groupName
+    ): void {
+        $attributeId = (int)$eavSetup->getAttributeId($entityTypeId, $attributeCode);
         if (!$attributeId) {
             return;
         }
@@ -69,12 +82,13 @@ class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
 
         foreach ($attributeSetIds as $attributeSetId) {
             $groupId = $eavSetup->getAttributeGroupId($entityTypeId, $attributeSetId, $groupName);
+
             if (!$groupId) {
                 $eavSetup->addAttributeGroup($entityTypeId, $attributeSetId, $groupName, 100);
                 $groupId = $eavSetup->getAttributeGroupId($entityTypeId, $attributeSetId, $groupName);
             }
 
-            $eavSetup->addAttributeToSet($entityTypeId, (int) $attributeSetId, (int) $groupId, $attributeId);
+            $eavSetup->addAttributeToSet($entityTypeId, (int)$attributeSetId, (int)$groupId, $attributeId);
         }
     }
 

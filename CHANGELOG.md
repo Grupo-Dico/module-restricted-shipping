@@ -7,3 +7,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ## [1.0.4] - 2026-04-14
 
 - Fix: purchase as guest
+
+## [1.0.5] - 2026-04-15
+
+- audit corrections

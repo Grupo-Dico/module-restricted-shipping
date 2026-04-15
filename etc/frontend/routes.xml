@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author GDMexico Team
+ * @package GDMexico_RestrictedShipping
+ * @copyright Copyright (c) 2026 GDMexico.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="standard">
+        <route id="restrictedshipping" frontName="restrictedshipping">
+            <module name="GDMexico_RestrictedShipping"/>
+        </route>
+    </router>
+</config>

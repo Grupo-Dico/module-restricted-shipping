@@ -5,10 +5,13 @@
  * @copyright Copyright (c) 2026 GDMexico.
  */
 declare(strict_types=1);
+
 namespace GDMexico\RestrictedShipping\Plugin;
 
 use GDMexico\RestrictedShipping\Model\RestrictionChecker;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Quote\Api\CartRepositoryInterface;
+use Magento\Quote\Api\Data\AddressInterface;
 use Magento\Quote\Model\GuestCart\GuestShippingMethodManagement;
 use Magento\Quote\Model\QuoteIdMaskFactory;
 
@@ -18,9 +21,6 @@ class GuestShippingMethodManagementPlugin
     private QuoteIdMaskFactory $quoteIdMaskFactory;
     private RestrictionChecker $restrictionChecker;
 
-    /**
-     * @return mixed
-     */
     public function __construct(
         CartRepositoryInterface $cartRepository,
         QuoteIdMaskFactory $quoteIdMaskFactory,
@@ -31,20 +31,15 @@ class GuestShippingMethodManagementPlugin
         $this->restrictionChecker = $restrictionChecker;
     }
 
-    /**
-     * @return mixed
-     */
     public function afterEstimateByAddress(
         GuestShippingMethodManagement $subject,
         array $result,
         $cartId,
-        \Magento\Quote\Api\Data\AddressInterface $address
+        AddressInterface $address
     ): array {
-        $quoteId = (int)$this->quoteIdMaskFactory->create()
-            ->load($cartId, 'masked_id')
-            ->getQuoteId();
-
+        $quoteId = $this->resolveQuoteId((string)$cartId);
         $quote = $this->cartRepository->getActive($quoteId);
+
         $validation = $this->restrictionChecker->validateQuoteByPostcode(
             $quote,
             (string)$address->getPostcode()
@@ -53,25 +48,33 @@ class GuestShippingMethodManagementPlugin
         return !empty($validation['is_restricted']) ? [] : $result;
     }
 
-    /**
-     * @return mixed
-     */
     public function afterEstimateByExtendedAddress(
         GuestShippingMethodManagement $subject,
         array $result,
         $cartId,
-        \Magento\Quote\Api\Data\AddressInterface $address
+        AddressInterface $address
     ): array {
-        $quoteId = (int)$this->quoteIdMaskFactory->create()
-            ->load($cartId, 'masked_id')
-            ->getQuoteId();
-
+        $quoteId = $this->resolveQuoteId((string)$cartId);
         $quote = $this->cartRepository->getActive($quoteId);
+
         $validation = $this->restrictionChecker->validateQuoteByPostcode(
             $quote,
             (string)$address->getPostcode()
         );
 
         return !empty($validation['is_restricted']) ? [] : $result;
+    }
+
+    private function resolveQuoteId(string $cartId): int
+    {
+        $quoteId = (int)$this->quoteIdMaskFactory->create()
+            ->load($cartId, 'masked_id')
+            ->getQuoteId();
+
+        if (!$quoteId) {
+            throw new NoSuchEntityException(__('No se encontró el carrito.'));
+        }
+
+        return $quoteId;
     }
 }

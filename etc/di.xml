@@ -9,9 +9,6 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
-    <preference for="GDMexico\RestrictedShipping\Api\ValidateCheckoutInterface"
-                type="GDMexico\RestrictedShipping\Model\ValidateCheckout"/>
-
     <type name="Magento\Quote\Model\ShippingMethodManagement">
         <plugin name="gdmexico_restricted_shipping_method_management"
                 type="GDMexico\RestrictedShipping\Plugin\ShippingMethodManagementPlugin"/>

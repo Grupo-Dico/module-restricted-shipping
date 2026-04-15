@@ -5,34 +5,34 @@
  * @copyright Copyright (c) 2026 GDMexico.
  */
 declare(strict_types=1);
+
 namespace GDMexico\RestrictedShipping\Model;
 
+use GDMexico\RestrictedShipping\Model\Exception\MunicipalityResolutionException;
 use GDMexico\RestrictedShipping\Model\Validator\RestrictedDestinationValidator;
-use LeanCommerce\Sepomex\Api\AddressInterface;
 use Magento\Quote\Api\Data\CartInterface;
+use Psr\Log\LoggerInterface;
 
 class RestrictionChecker
 {
-    private AddressInterface $sepomexAddress;
+    private MunicipalityResolver $municipalityResolver;
     private RestrictedDestinationValidator $validator;
+    private LoggerInterface $logger;
 
-    /**
-     * @return mixed
-     */
     public function __construct(
-        AddressInterface $sepomexAddress,
-        RestrictedDestinationValidator $validator
+        MunicipalityResolver $municipalityResolver,
+        RestrictedDestinationValidator $validator,
+        LoggerInterface $logger
     ) {
-        $this->sepomexAddress = $sepomexAddress;
+        $this->municipalityResolver = $municipalityResolver;
         $this->validator = $validator;
+        $this->logger = $logger;
     }
 
-    /**
-     * @return mixed
-     */
     public function validateQuoteByPostcode(CartInterface $quote, string $postcode): array
     {
         $postcode = trim($postcode);
+
         if ($postcode === '') {
             return [
                 'is_restricted' => false,
@@ -42,8 +42,22 @@ class RestrictionChecker
             ];
         }
 
-        $address = $this->sepomexAddress->getAddressByZip($postcode);
-        $municipality = (string)($address[1]['municipio'] ?? '');
+        try {
+            $municipality = $this->municipalityResolver->resolveByPostcode($postcode);
+        } catch (MunicipalityResolutionException $e) {
+            $this->logger->error('RestrictedShipping municipality resolution failed', [
+                'postcode' => $postcode,
+                'quote_id' => (int)$quote->getId(),
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'is_restricted' => true,
+                'municipality' => '',
+                'matched_items' => [],
+                'message' => 'No fue posible validar la cobertura de envío en este momento. Intenta nuevamente en unos minutos.'
+            ];
+        }
 
         return $this->validator->validate($quote, $municipality);
     }

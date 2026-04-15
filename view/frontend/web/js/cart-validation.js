@@ -5,21 +5,19 @@ define([
 ], function ($, storage, urlBuilder) {
     'use strict';
 
-    function normalizeResponse(response) {
-        if ($.isArray(response)) {
-            return {
-                is_restricted: response[0] || false,
-                municipality: response[1] || '',
-                matched_items: response[2] || [],
-                message: response[3] || ''
-            };
-        }
+    var timer = null;
+    var pendingRequest = null;
+    var lastKey = null;
+    var cache = {};
 
-        return response || {
-            is_restricted: false,
-            municipality: '',
-            matched_items: [],
-            message: ''
+    function normalizeResponse(response) {
+        response = response || {};
+
+        return {
+            is_restricted: !!response.is_restricted,
+            municipality: response.municipality || '',
+            message: response.message || '',
+            matched_items: Array.isArray(response.matched_items) ? response.matched_items : []
         };
     }
 
@@ -54,13 +52,9 @@ define([
             var $sidebar = getSidebarContainer();
 
             if ($sidebar.length) {
-                $sidebar.after(
-                    '<div id="gdmexico-restricted-sidebar-message" style="display:none; margin-top:16px;"></div>'
-                );
+                $sidebar.after('<div id="gdmexico-restricted-sidebar-message" style="display:none; margin-top:16px;"></div>');
             } else {
-                $('.cart-summary').append(
-                    '<div id="gdmexico-restricted-sidebar-message" style="display:none; margin-top:16px;"></div>'
-                );
+                $('.cart-summary').append('<div id="gdmexico-restricted-sidebar-message" style="display:none; margin-top:16px;"></div>');
             }
 
             $container = $('#gdmexico-restricted-sidebar-message');
@@ -70,107 +64,125 @@ define([
     }
 
     function clearMessages() {
-        // Quitar mensaje superior si existe
         $('#gdmexico-restricted-cart-message').remove();
-
-        // Limpiar mensaje lateral
-        $('#gdmexico-restricted-sidebar-message').hide().html('');
-
-        // Limpiar mensajes por item
-        $('.gdmexico-restricted-item-message').remove();
+        $('#gdmexico-restricted-sidebar-message').hide().empty();
 
         getCheckoutButton()
             .prop('disabled', false)
             .removeClass('disabled');
     }
 
-    function renderSidebarMessage(response) {
-        var html = '<div class="message error">' +
-            '<div>' + response.message;
+    function buildRestrictedItemsList(items) {
+        var $wrapper = $('<div/>');
+        var $title = $('<div/>', {
+            style: 'margin-top:10px; font-weight:600;'
+        }).text('Productos restringidos:');
+        var $ul = $('<ul/>', {
+            style: 'margin-top:8px; padding-left:18px;'
+        });
 
-        if (response.matched_items && response.matched_items.length) {
-            html += '<br><strong>Productos restringidos:</strong><ul>';
+        $.each(items, function (index, item) {
+            var name = item && item.name ? String(item.name) : '';
+            var sku = item && item.sku ? String(item.sku) : '';
+            var label = name;
 
-            $.each(response.matched_items, function (index, item) {
-                html += '<li>' + item.name + ' (' + item.sku + ')</li>';
-            });
+            if (sku) {
+                label += ' (' + sku + ')';
+            }
 
-            html += '</ul>';
-        }
+            $('<li/>').text(label).appendTo($ul);
+        });
 
-        html += '</div></div>';
+        $wrapper.append($title).append($ul);
 
-        ensureSidebarMessageContainer().html(html).show();
+        return $wrapper;
     }
 
-    function markItems(response) {
-        $.each(response.matched_items || [], function (index, item) {
-            var $qtyInput = $('input.cart-item-qty[data-cart-item-id="' + item.item_id + '"]');
-            if (!$qtyInput.length) {
+    function renderSidebarMessage(response) {
+        var $wrapper = $('<div/>', {
+            'class': 'message error'
+        });
+
+        $('<div/>')
+            .text(response.message || '')
+            .appendTo($wrapper);
+
+        if (response.matched_items && response.matched_items.length) {
+            $wrapper.append(buildRestrictedItemsList(response.matched_items));
+        }
+
+        ensureSidebarMessageContainer().empty().append($wrapper).show();
+    }
+
+    function validate() {
+        var postcode = getPostcode();
+        var key;
+
+        if (!postcode) {
+            clearMessages();
+            return;
+        }
+
+        key = postcode;
+
+        if (lastKey === key && cache[key]) {
+            clearMessages();
+
+            if (cache[key].is_restricted) {
+                renderSidebarMessage(cache[key]);
+                getCheckoutButton().prop('disabled', true).addClass('disabled');
+            }
+
+            return;
+        }
+
+        if (pendingRequest && pendingRequest.abort) {
+            pendingRequest.abort();
+        }
+
+        pendingRequest = storage.get(
+            urlBuilder.build('restrictedshipping/ajax/validate?postcode=' + encodeURIComponent(postcode)),
+            false
+        );
+
+        pendingRequest.done(function (rawResponse) {
+            var response = normalizeResponse(rawResponse);
+
+            cache[key] = response;
+            lastKey = key;
+
+            clearMessages();
+
+            if (!response.is_restricted) {
                 return;
             }
 
-            var $row = $qtyInput.closest('tr');
-            if ($row.length && !$row.next('.gdmexico-restricted-item-message').length) {
-                $row.after(
-                    '<tr class="gdmexico-restricted-item-message">' +
-                        '<td colspan="99">' +
-                            '<div class="message error">' +
-                                '<div>Este producto no puede enviarse al municipio seleccionado: ' + response.municipality + '.</div>' +
-                            '</div>' +
-                        '</td>' +
-                    '</tr>'
-                );
-            }
+            renderSidebarMessage(response);
+
+            getCheckoutButton()
+                .prop('disabled', true)
+                .addClass('disabled');
+        }).fail(function () {
+            clearMessages();
         });
     }
 
-    return function (config) {
-        var cartId = config.cartId || '';
+    function scheduleValidation(delay) {
+        clearTimeout(timer);
+        timer = setTimeout(validate, delay || 350);
+    }
 
-        function validate() {
-            var postcode = getPostcode();
-
-            if (!cartId || !postcode) {
-                clearMessages();
-                return;
-            }
-
-            var serviceUrl = urlBuilder.build(
-                '/rest/V1/restricted-shipping/validate/' + cartId + '/' + encodeURIComponent(postcode)
-            );
-
-            storage.get(serviceUrl, false).done(function (rawResponse) {
-                var response = normalizeResponse(rawResponse);
-
-                clearMessages();
-
-                if (!response.is_restricted) {
-                    return;
-                }
-
-                renderSidebarMessage(response);
-                markItems(response);
-
-                getCheckoutButton()
-                    .prop('disabled', true)
-                    .addClass('disabled');
-            }).fail(function () {
-                clearMessages();
-            });
-        }
-
+    return function () {
         $(document).ready(function () {
-            setTimeout(validate, 500);
-            setTimeout(validate, 1500);
+            scheduleValidation(400);
         });
 
         $(document).on('keyup change blur', 'input[name="postcode"]', function () {
-            setTimeout(validate, 300);
+            scheduleValidation(350);
         });
 
         $(document).ajaxComplete(function () {
-            setTimeout(validate, 800);
+            scheduleValidation(500);
         });
 
         $(document).on('click', '.cart-summary .action.primary.checkout, .checkout-methods-items .action.primary.checkout', function (e) {

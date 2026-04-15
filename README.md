@@ -1,72 +1,47 @@
 # GDMexico_RestrictedShipping
 
 ## Objetivo
-Bloquear el checkout cuando el municipio del envío esté restringido y el carrito contenga productos afectados por alguna regla activa.
+Bloquear el flujo de envío y colocación de pedido cuando:
 
-## Escalabilidad incluida
-El módulo ya queda preparado para:
-- Bloquear múltiples municipios desde administración.
-- Bloquear por producto con atributo de catálogo.
-- Bloquear por categoría desde configuración.
-- Bloquear por proveedor logístico desde configuración.
-- Activar o desactivar cada regla desde administración.
+1. El municipio resuelto a partir del código postal está configurado como restringido.
+2. El carrito contiene productos marcados con el atributo `is_external_carrier_restricted`.
 
-## Cómo funciona
-1. El checkout toma el código postal capturado.
-2. Se consulta `LeanCommerce_Sepomex` para obtener el municipio.
-3. Se valida si el municipio está en configuración restringida.
-4. Se evalúan las reglas activas sobre los productos del carrito:
-   - atributo `is_external_carrier_restricted`
-   - categorías configuradas
-5. Si alguna regla aplica, se bloquea el checkout con mensaje al cliente.
+## Alcance actual
+Este módulo implementa actualmente:
 
-## Validaciones incluidas
-- Bloqueo temprano al guardar información de envío.
-- Bloqueo backend al intentar colocar la orden.
-- Compatible con clientes logueados y guest.
-- Revalidación al cambiar dirección.
+- Validación por municipio restringido.
+- Validación por atributo de producto marcado.
+- Bloqueo en carrito.
+- Bloqueo al guardar dirección de envío.
+- Bloqueo al estimar métodos de envío.
+- Bloqueo antes de colocar la orden.
+- Validación para cliente logueado y guest.
+
+## No implementado actualmente
+Este módulo no implementa hoy:
+
+- Reglas por categoría.
+- Reglas por proveedor logístico.
+- Configuración de carriers restringidos.
+- Configuración de categorías restringidas.
 
 ## Configuración
-Ruta en admin:
+Ruta en administración:
+
 `Stores > Configuration > Sales > Restricción de Envíos por Municipio`
 
-### Campos principales
-- **Habilitar validación**
-- **Mensaje al cliente**
-- **Municipios restringidos**
-- **Bloquear por producto marcado**
-- **Bloquear por categoría**
-- **Categorías restringidas**
-- **Bloquear por proveedor logístico**
-- **Proveedores logísticos restringidos**
+### Campos disponibles
+- Habilitar validación
+- Mensaje al cliente
+- Municipios restringidos
+- Bloquear por producto marcado
 
-## Atributos de producto
-### 1. `is_external_carrier_restricted`
-Tipo Sí/No para marcar productos que no deben enviarse a municipios restringidos.
-
-## Ejemplo de configuración para tu caso actual
-- Municipios restringidos: `Chimalhuacán`
-- Bloquear por producto marcado: `Sí`
-
-## Ejemplo futuro
-- Municipios restringidos:
-  - `Chimalhuacán`
-  - `Ecatepec`
-  - `Nezahualcóyotl`
-- Bloquear por producto marcado: `Sí`
-- Bloquear por categoría: `Sí`
+## Atributo de producto
+### is_external_carrier_restricted
+Atributo booleano para indicar que un producto no debe permitirse en municipios restringidos.
 
 ## Instalación
 ```bash
 bin/magento module:enable GDMexico_RestrictedShipping
 bin/magento setup:upgrade
 bin/magento cache:flush
-```
-
-
-## Notas sobre atributos
-
-Los atributos del módulo se asignan automáticamente a **todos los attribute sets de producto existentes** durante la instalación/actualización del módulo.
-
-Atributos creados:
-- `is_external_carrier_restricted`
