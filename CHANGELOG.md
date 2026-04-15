@@ -8,6 +8,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - Fix: purchase as guest
 
-## [1.0.5] - 2026-04-15
+## [1.0.7] - 2026-04-15
 
 - audit corrections
