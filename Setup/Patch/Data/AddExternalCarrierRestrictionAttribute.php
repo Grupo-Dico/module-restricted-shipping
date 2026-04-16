@@ -15,11 +15,24 @@ use Magento\Eav\Setup\EavSetupFactory;
 use Magento\Framework\Setup\ModuleDataSetupInterface;
 use Magento\Framework\Setup\Patch\DataPatchInterface;
 
+/**
+ * Class AddExternalCarrierRestrictionAttribute
+ *
+ * Adds the product attribute used to restrict shipping on selected municipalities.
+ *
+ * @package GDMexico\RestrictedShipping\Setup\Patch\Data
+ */
 class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
 {
     private ModuleDataSetupInterface $moduleDataSetup;
     private EavSetupFactory $eavSetupFactory;
 
+    /**
+     * AddExternalCarrierRestrictionAttribute constructor.
+     *
+     * @param ModuleDataSetupInterface $moduleDataSetup
+     * @param EavSetupFactory $eavSetupFactory
+     */
     public function __construct(
         ModuleDataSetupInterface $moduleDataSetup,
         EavSetupFactory $eavSetupFactory
@@ -28,13 +41,18 @@ class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
         $this->eavSetupFactory = $eavSetupFactory;
     }
 
+    /**
+     * Apply patch data.
+     *
+     * @return void
+     */
     public function apply()
     {
         $this->moduleDataSetup->getConnection()->startSetup();
 
         /** @var EavSetup $eavSetup */
         $eavSetup = $this->eavSetupFactory->create(['setup' => $this->moduleDataSetup]);
-        $entityTypeId = $eavSetup->getEntityTypeId(Product::ENTITY);
+        $entityTypeId = (int)$eavSetup->getEntityTypeId(Product::ENTITY);
 
         $attributeCode = 'is_external_carrier_restricted';
         $attributeData = [
@@ -58,15 +76,29 @@ class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
             'apply_to' => ''
         ];
 
-        if (!$eavSetup->getAttributeId($entityTypeId, $attributeCode)) {
+        if (!(int)$eavSetup->getAttributeId($entityTypeId, $attributeCode)) {
             $eavSetup->addAttribute(Product::ENTITY, $attributeCode, $attributeData);
         }
 
-        $this->assignAttributeToAllSets($eavSetup, $entityTypeId, $attributeCode, $attributeData['group']);
+        $this->assignAttributeToAllSets(
+            $eavSetup,
+            $entityTypeId,
+            $attributeCode,
+            (string)$attributeData['group']
+        );
 
         $this->moduleDataSetup->getConnection()->endSetup();
     }
 
+    /**
+     * Assign the attribute to all existing attribute sets.
+     *
+     * @param EavSetup $eavSetup
+     * @param int $entityTypeId
+     * @param string $attributeCode
+     * @param string $groupName
+     * @return void
+     */
     private function assignAttributeToAllSets(
         EavSetup $eavSetup,
         int $entityTypeId,
@@ -81,22 +113,34 @@ class AddExternalCarrierRestrictionAttribute implements DataPatchInterface
         $attributeSetIds = $eavSetup->getAllAttributeSetIds($entityTypeId);
 
         foreach ($attributeSetIds as $attributeSetId) {
-            $groupId = $eavSetup->getAttributeGroupId($entityTypeId, $attributeSetId, $groupName);
+            $attributeSetId = (int)$attributeSetId;
+
+            $groupId = (int)$eavSetup->getAttributeGroupId($entityTypeId, $attributeSetId, $groupName);
 
             if (!$groupId) {
                 $eavSetup->addAttributeGroup($entityTypeId, $attributeSetId, $groupName, 100);
-                $groupId = $eavSetup->getAttributeGroupId($entityTypeId, $attributeSetId, $groupName);
+                $groupId = (int)$eavSetup->getAttributeGroupId($entityTypeId, $attributeSetId, $groupName);
             }
 
-            $eavSetup->addAttributeToSet($entityTypeId, (int)$attributeSetId, (int)$groupId, $attributeId);
+            $eavSetup->addAttributeToSet($entityTypeId, $attributeSetId, $groupId, $attributeId);
         }
     }
 
+    /**
+     * Get patch dependencies.
+     *
+     * @return array
+     */
     public static function getDependencies(): array
     {
         return [];
     }
 
+    /**
+     * Get patch aliases.
+     *
+     * @return array
+     */
     public function getAliases(): array
     {
         return [];
