@@ -11,3 +11,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ## [1.0.7] - 2026-04-15
 
 - audit corrections
+
+## [1.0.9] - 2026-04-15
+
+- message position correction

@@ -28,9 +28,7 @@ define([
     }
 
     function removeMessages() {
-        $('#gdmexico-restricted-top-message').remove();
         $('#gdmexico-restricted-method-message').remove();
-        $('#gdmexico-restricted-sidebar-message').remove();
     }
 
     function buildRestrictedItemsList(items) {
@@ -59,32 +57,8 @@ define([
         return $wrapper;
     }
 
-    function renderTopMessage(response) {
-        var $target = $('.checkout-shipping-address, #checkout-step-shipping').first();
-
-        if (!$target.length) {
-            return;
-        }
-
-        $('#gdmexico-restricted-top-message').remove();
-
-        var $message = $('<div/>', {
-            id: 'gdmexico-restricted-top-message',
-            'class': 'message error',
-            style: 'margin: 0 0 20px;'
-        });
-
-        $('<div/>').text(response.message || '').appendTo($message);
-
-        if (response.matched_items && response.matched_items.length) {
-            $message.append(buildRestrictedItemsList(response.matched_items));
-        }
-
-        $target.before($message);
-    }
-
     function renderMethodMessage(response) {
-        var $container = $('#checkout-step-shipping_method .step-content');
+        var $container = $('#checkout-step-shipping_method');
 
         if (!$container.length) {
             return;
@@ -109,6 +83,10 @@ define([
         quote.shippingMethod(null);
     }
 
+    function showNoQuotesBlock() {
+        $('#checkout-step-shipping_method .no-quotes-block').show();
+    }
+
     function validateRestriction() {
         var postcode = getPostcode();
         var key;
@@ -124,11 +102,10 @@ define([
             removeMessages();
 
             if (!cache[key].is_restricted) {
-                $('#checkout-step-shipping_method .step-content .no-quotes-block').show();
+                showNoQuotesBlock();
                 return;
             }
 
-            renderTopMessage(cache[key]);
             renderMethodMessage(cache[key]);
             return;
         }
@@ -151,11 +128,10 @@ define([
             removeMessages();
 
             if (!response.is_restricted) {
-                $('#checkout-step-shipping_method .step-content .no-quotes-block').show();
+                showNoQuotesBlock();
                 return;
             }
 
-            renderTopMessage(response);
             renderMethodMessage(response);
         }).fail(function () {
             removeMessages();
